@@ -1,4 +1,5 @@
 import os
+os.environ["GPIOZERO_PIN_FACTORY"] = "lgpio"
 import subprocess
 import tempfile
 import time
