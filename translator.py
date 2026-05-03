@@ -12,7 +12,7 @@ RECORD_SECONDS = 6
 GGUF_MODEL = "/home/edgemd/.cache/huggingface/hub/models--bartowski--Llama-3.2-3B-Instruct-GGUF/snapshots/5ab33fa94d1d04e903623ae72c95d1696f09f9e8/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
 PIPER_BIN = "/home/edgemd/piper/piper/piper"
 PIPER_MODEL = "/home/edgemd/piper/models/es_MX-claude-high.onnx"
-WHISPER_BIN = "/home/edgemd/whisper.cpp/build/bin/main"
+WHISPER_BIN = "/home/edgemd/whisper.cpp/build/bin/whisper-cli"
 WHISPER_MODEL = "/home/edgemd/whisper.cpp/models/ggml-base.en.bin"
 
 # Load LLM once at startup
