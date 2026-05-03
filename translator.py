@@ -1,12 +1,11 @@
 import os
-os.environ["GPIOZERO_PIN_FACTORY"] = "lgpio"
 import subprocess
 import tempfile
 import time
 import numpy as np
 import sounddevice as sd
 import scipy.io.wavfile as wav
-from gpiozero import Button
+import gpiod
 from llama_cpp import Llama
 
 # --- CONFIG ---
@@ -19,17 +18,22 @@ PIPER_MODEL = "/home/edgemd/piper/models/es_MX-claude-high.onnx"
 WHISPER_BIN = "/home/edgemd/whisper.cpp/build/bin/whisper-cli"
 WHISPER_MODEL = "/home/edgemd/whisper.cpp/models/ggml-base.en.bin"
 
-button = Button(BUTTON_PIN)
+chip = gpiod.Chip("gpiochip0")
+line = chip.get_line(BUTTON_PIN)
+line.request(consumer="translator", type=gpiod.LINE_REQ_DIR_IN)
 
 print("Loading LLM from cache...")
 llm = Llama(model_path=GGUF_MODEL, n_ctx=512, n_threads=4, verbose=False)
 print("LLM loaded. Hold button to record.")
 
+def is_pressed():
+    return line.get_value() == 0
+
 def record_while_held():
     frames = []
     chunk_size = int(CHUNK_SECONDS * SAMPLE_RATE)
     print("Recording...")
-    while button.is_pressed:
+    while is_pressed():
         chunk = sd.rec(chunk_size, samplerate=SAMPLE_RATE, channels=1, dtype='int16')
         sd.wait()
         frames.append(chunk)
@@ -71,7 +75,8 @@ def speak_spanish(spanish_text):
 if __name__ == "__main__":
     while True:
         try:
-            button.wait_for_press()
+            while not is_pressed():
+                time.sleep(0.05)
 
             audio = record_while_held()
             if len(audio) == 0:
@@ -99,4 +104,5 @@ if __name__ == "__main__":
 
         except KeyboardInterrupt:
             print("\nExiting.")
+            line.release()
             break
