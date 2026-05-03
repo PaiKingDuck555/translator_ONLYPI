@@ -20,6 +20,7 @@ PIPER_BIN = "/home/edgemd/piper/piper/piper"
 PIPER_MODEL = "/home/edgemd/piper/models/es_MX-claude-high.onnx"
 WHISPER_BIN = "/home/edgemd/whisper.cpp/build/bin/whisper-cli"
 WHISPER_MODEL = "/home/edgemd/whisper.cpp/models/ggml-base.en.bin"
+AUDIO_OUT = "plughw:3,0"
 
 request = gpiod.request_lines(
     "/dev/gpiochip0",
@@ -103,7 +104,7 @@ def speak_spanish(spanish_text):
         input=spanish_text.encode(),
         check=True
     )
-    subprocess.run(["aplay", "-D", "plughw:3,0", out_wav], check=True)
+    subprocess.run(["aplay", "-D", AUDIO_OUT, out_wav], check=True)
     os.unlink(out_wav)
 
 def pipeline_loop():
