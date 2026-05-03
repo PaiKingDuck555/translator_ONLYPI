@@ -18,7 +18,7 @@ PIPER_MODEL = "/home/edgemd/piper/models/es_MX-claude-high.onnx"
 WHISPER_BIN = "/home/edgemd/whisper.cpp/build/bin/whisper-cli"
 WHISPER_MODEL = "/home/edgemd/whisper.cpp/models/ggml-base.en.bin"
 
-chip = gpiod.Chip("gpiochip0")
+chip = gpiod.Chip("/dev/gpiochip0")
 line = chip.get_line(BUTTON_PIN)
 line.request(consumer="translator", type=gpiod.LINE_REQ_DIR_IN)
 
