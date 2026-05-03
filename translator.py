@@ -2,29 +2,40 @@ import os
 import subprocess
 import tempfile
 import time
+import numpy as np
 import sounddevice as sd
 import scipy.io.wavfile as wav
+from gpiozero import Button
 from llama_cpp import Llama
 
 # --- CONFIG ---
 SAMPLE_RATE = 44100
-RECORD_SECONDS = 6
+CHUNK_SECONDS = 0.5
+BUTTON_PIN = 23
 GGUF_MODEL = "/home/edgemd/.cache/huggingface/hub/models--bartowski--Llama-3.2-3B-Instruct-GGUF/snapshots/5ab33fa94d1d04e903623ae72c95d1696f09f9e8/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
 PIPER_BIN = "/home/edgemd/piper/piper/piper"
 PIPER_MODEL = "/home/edgemd/piper/models/es_MX-claude-high.onnx"
 WHISPER_BIN = "/home/edgemd/whisper.cpp/build/bin/whisper-cli"
 WHISPER_MODEL = "/home/edgemd/whisper.cpp/models/ggml-base.en.bin"
 
-# Load LLM once at startup
+button = Button(BUTTON_PIN)
+
 print("Loading LLM from cache...")
 llm = Llama(model_path=GGUF_MODEL, n_ctx=512, n_threads=4, verbose=False)
-print("LLM loaded.")
+print("LLM loaded. Hold button to record.")
 
-def record_audio():
-    print("Recording... speak now.")
-    audio = sd.rec(int(RECORD_SECONDS * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=1, dtype='int16')
-    sd.wait()
+def record_while_held():
+    frames = []
+    chunk_size = int(CHUNK_SECONDS * SAMPLE_RATE)
+    print("Recording...")
+    while button.is_pressed:
+        chunk = sd.rec(chunk_size, samplerate=SAMPLE_RATE, channels=1, dtype='int16')
+        sd.wait()
+        frames.append(chunk)
     print("Done recording.")
+    return np.concatenate(frames)
+
+def save_audio(audio):
     tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
     wav.write(tmp.name, SAMPLE_RATE, audio)
     return tmp.name
@@ -57,16 +68,34 @@ def speak_spanish(spanish_text):
     os.unlink(out_wav)
 
 if __name__ == "__main__":
-    start = time.time()
+    while True:
+        try:
+            button.wait_for_press()
 
-    audio_file = record_audio()
-    english = transcribe(audio_file)
-    os.unlink(audio_file)
-    print(f"You said: {english}")
+            audio = record_while_held()
+            if len(audio) == 0:
+                continue
 
-    spanish = translate_with_llama(english)
-    print(f"Spanish: {spanish}")
+            start = time.time()
+            audio_file = save_audio(audio)
+            t1 = time.time()
 
-    speak_spanish(spanish)
+            english = transcribe(audio_file)
+            os.unlink(audio_file)
+            t2 = time.time()
+            print(f"You said: {english}")
+            print(f"  [transcribe: {t2 - t1:.2f}s]")
 
-    print(f"Total time: {time.time() - start:.2f}s")
+            spanish = translate_with_llama(english)
+            t3 = time.time()
+            print(f"Spanish: {spanish}")
+            print(f"  [translate: {t3 - t2:.2f}s]")
+
+            speak_spanish(spanish)
+            t4 = time.time()
+            print(f"  [tts+play: {t4 - t3:.2f}s]")
+            print(f"Total time: {t4 - start:.2f}s")
+
+        except KeyboardInterrupt:
+            print("\nExiting.")
+            break
