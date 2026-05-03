@@ -6,6 +6,7 @@ import numpy as np
 import sounddevice as sd
 import scipy.io.wavfile as wav
 import gpiod
+from gpiod.line import Direction, Value
 from llama_cpp import Llama
 
 # --- CONFIG ---
@@ -18,16 +19,18 @@ PIPER_MODEL = "/home/edgemd/piper/models/es_MX-claude-high.onnx"
 WHISPER_BIN = "/home/edgemd/whisper.cpp/build/bin/whisper-cli"
 WHISPER_MODEL = "/home/edgemd/whisper.cpp/models/ggml-base.en.bin"
 
-chip = gpiod.Chip("/dev/gpiochip0")
-line = chip.get_line(BUTTON_PIN)
-line.request(consumer="translator", type=gpiod.LINE_REQ_DIR_IN)
+request = gpiod.request_lines(
+    "/dev/gpiochip0",
+    consumer="translator",
+    config={BUTTON_PIN: gpiod.LineSettings(direction=Direction.INPUT)}
+)
 
 print("Loading LLM from cache...")
 llm = Llama(model_path=GGUF_MODEL, n_ctx=512, n_threads=4, verbose=False)
 print("LLM loaded. Hold button to record.")
 
 def is_pressed():
-    return line.get_value() == 0
+    return request.get_value(BUTTON_PIN) == Value.ACTIVE
 
 def record_while_held():
     frames = []
@@ -104,5 +107,5 @@ if __name__ == "__main__":
 
         except KeyboardInterrupt:
             print("\nExiting.")
-            line.release()
+            request.release()
             break
