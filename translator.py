@@ -53,7 +53,7 @@ def speak_spanish(spanish_text):
         input=spanish_text.encode(),
         check=True
     )
-    subprocess.run(["aplay", out_wav], check=True)
+    subprocess.run(["aplay", "-D", "plughw:2,0", out_wav], check=True)
     os.unlink(out_wav)
 
 if __name__ == "__main__":
