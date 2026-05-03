@@ -33,8 +33,11 @@ llm = Llama(model_path=GGUF_MODEL, n_ctx=512, n_threads=4, verbose=False)
 print("LLM loaded. Hold button to record.")
 
 # --- UI SETUP ---
+SCREEN_W = 800
+
 root = tk.Tk()
-root.attributes("-fullscreen", True)
+root.geometry("800x480+0+0")
+root.overrideredirect(True)
 root.configure(bg="black")
 root.bind("<Escape>", lambda e: root.destroy())
 
@@ -42,18 +45,26 @@ status_var = tk.StringVar(value="Hold button to speak...")
 english_var = tk.StringVar(value="")
 spanish_var = tk.StringVar(value="")
 
-tk.Label(root, textvariable=status_var, font=("Helvetica", 18), fg="gray", bg="black").pack(pady=(20, 0))
-tk.Frame(root, bg="black", height=10).pack()
+# Status bar at top
+tk.Label(root, textvariable=status_var, font=("Helvetica", 16), fg="gray", bg="black").pack(fill="x", pady=(10, 0))
 
-top_frame = tk.Frame(root, bg="#111111", bd=2, relief="flat")
-top_frame.pack(fill="both", expand=True, padx=20, pady=(10, 5))
-tk.Label(top_frame, text="ENGLISH", font=("Helvetica", 14, "bold"), fg="#888888", bg="#111111").pack(anchor="w", padx=15, pady=(10, 0))
-tk.Label(top_frame, textvariable=english_var, font=("Helvetica", 26), fg="white", bg="#111111", wraplength=740, justify="left").pack(anchor="w", padx=15, pady=(5, 15))
+# Divider
+tk.Frame(root, bg="#333333", height=1).pack(fill="x", padx=10, pady=5)
 
-bottom_frame = tk.Frame(root, bg="#111122", bd=2, relief="flat")
-bottom_frame.pack(fill="both", expand=True, padx=20, pady=(5, 20))
-tk.Label(bottom_frame, text="ESPAÑOL", font=("Helvetica", 14, "bold"), fg="#8888ff", bg="#111122").pack(anchor="w", padx=15, pady=(10, 0))
-tk.Label(bottom_frame, textvariable=spanish_var, font=("Helvetica", 26), fg="#aaaaff", bg="#111122", wraplength=740, justify="left").pack(anchor="w", padx=15, pady=(5, 15))
+# English section
+top_frame = tk.Frame(root, bg="#0d0d0d")
+top_frame.pack(fill="both", expand=True, padx=10, pady=(0, 3))
+tk.Label(top_frame, text="ENGLISH", font=("Helvetica", 13, "bold"), fg="#666666", bg="#0d0d0d", anchor="w").pack(fill="x", padx=12, pady=(8, 2))
+tk.Label(top_frame, textvariable=english_var, font=("Helvetica", 34, "bold"), fg="white", bg="#0d0d0d", wraplength=SCREEN_W - 30, justify="left", anchor="w").pack(fill="both", expand=True, padx=12, pady=(0, 8))
+
+# Divider
+tk.Frame(root, bg="#333333", height=1).pack(fill="x", padx=10, pady=3)
+
+# Spanish section
+bottom_frame = tk.Frame(root, bg="#0a0a1a")
+bottom_frame.pack(fill="both", expand=True, padx=10, pady=(3, 10))
+tk.Label(bottom_frame, text="ESPAÑOL", font=("Helvetica", 13, "bold"), fg="#5555cc", bg="#0a0a1a", anchor="w").pack(fill="x", padx=12, pady=(8, 2))
+tk.Label(bottom_frame, textvariable=spanish_var, font=("Helvetica", 34, "bold"), fg="#9999ff", bg="#0a0a1a", wraplength=SCREEN_W - 30, justify="left", anchor="w").pack(fill="both", expand=True, padx=12, pady=(0, 8))
 
 def update_display(english, spanish, status="Hold button to speak..."):
     english_var.set(english)
