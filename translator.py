@@ -11,8 +11,8 @@ SAMPLE_RATE = 44100
 RECORD_SECONDS = 6
 GGUF_MODEL = "/home/edgemd/.cache/huggingface/hub/models--bartowski--Llama-3.2-3B-Instruct-GGUF/snapshots/5ab33fa94d1d04e903623ae72c95d1696f09f9e8/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
 PIPER_MODEL = "/home/pi/piper/es_MX-ald-medium.onnx"
-WHISPER_BIN = "/home/pi/whisper.cpp/main"
-WHISPER_MODEL = "/home/pi/whisper.cpp/models/ggml-base.en.bin"
+WHISPER_BIN = "/home/edgemd/whisper.cpp/main"
+WHISPER_MODEL = "/home/edgemd/whisper.cpp/models/ggml-base.en.bin"
 
 # Load LLM once at startup
 print("Loading LLM from cache...")
