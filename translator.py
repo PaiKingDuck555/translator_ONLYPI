@@ -10,8 +10,9 @@ from llama_cpp import Llama
 SAMPLE_RATE = 44100
 RECORD_SECONDS = 6
 GGUF_MODEL = "/home/edgemd/.cache/huggingface/hub/models--bartowski--Llama-3.2-3B-Instruct-GGUF/snapshots/5ab33fa94d1d04e903623ae72c95d1696f09f9e8/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
-PIPER_MODEL = "/home/pi/piper/es_MX-ald-medium.onnx"
-WHISPER_BIN = "/home/edgemd/whisper.cpp/main"
+PIPER_BIN = "/home/edgemd/piper/piper/piper"
+PIPER_MODEL = "/home/edgemd/piper/models/es_MX-claude-high.onnx"
+WHISPER_BIN = "/home/edgemd/whisper.cpp/build/bin/main"
 WHISPER_MODEL = "/home/edgemd/whisper.cpp/models/ggml-base.en.bin"
 
 # Load LLM once at startup
@@ -48,7 +49,7 @@ def speak_spanish(spanish_text):
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         out_wav = tmp.name
     subprocess.run(
-        ["piper", "--model", PIPER_MODEL, "--output_file", out_wav],
+        [PIPER_BIN, "--model", PIPER_MODEL, "--output_file", out_wav],
         input=spanish_text.encode(),
         check=True
     )
