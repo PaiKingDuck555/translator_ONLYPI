@@ -4,25 +4,19 @@ import tempfile
 import time
 import sounddevice as sd
 import scipy.io.wavfile as wav
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from llama_cpp import Llama
 
 # --- CONFIG ---
 SAMPLE_RATE = 16000
 RECORD_SECONDS = 6
-HF_MODEL_NAME = "models--bartowski--Llama-3.2-3B-Instruct-GGUF"  # update to match your cached model name exactly
-PIPER_MODEL = "/home/pi/piper/es_MX-ald-medium.onnx"   # update to your Spanish .onnx path
+GGUF_MODEL = "/home/edgemd/.cache/huggingface/hub/models--bartowski--Llama-3.2-3B-Instruct-GGUF/snapshots/5ab33fa94d1d04e903623ae72c95d1696f09f9e8/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
+PIPER_MODEL = "/home/pi/piper/es_MX-ald-medium.onnx"
+WHISPER_BIN = "/home/pi/whisper.cpp/main"
+WHISPER_MODEL = "/home/pi/whisper.cpp/models/ggml-base.en.bin"
 
-# Load LLM once at startup so it's not reloaded every call
+# Load LLM once at startup
 print("Loading LLM from cache...")
-tokenizer = AutoTokenizer.from_pretrained(HF_MODEL_NAME, local_files_only=True)
-llm = AutoModelForCausalLM.from_pretrained(
-    HF_MODEL_NAME,
-    local_files_only=True,
-    torch_dtype=torch.float32,  # use float16 if your RPi/device supports it
-    device_map="cpu"
-)
-llm.eval()
+llm = Llama(model_path=GGUF_MODEL, n_ctx=512, n_threads=4, verbose=False)
 print("LLM loaded.")
 
 def record_audio():
@@ -35,9 +29,11 @@ def record_audio():
     return tmp.name
 
 def transcribe(audio_path):
-    model = whisper.load_model("base")
-    result = model.transcribe(audio_path, language="en")
-    return result["text"].strip()
+    result = subprocess.run(
+        [WHISPER_BIN, "-m", WHISPER_MODEL, "-f", audio_path, "-l", "en", "-np", "-nt"],
+        capture_output=True, text=True, check=True
+    )
+    return result.stdout.strip()
 
 def translate_with_llama(english_text):
     prompt = (
@@ -45,19 +41,8 @@ def translate_with_llama(english_text):
         "to Spanish. Output only the Spanish translation directly, nothing else no extra notes, speeches, rambles, or explanations.\n\n"
         f"English: {english_text}\nSpanish:"
     )
-    inputs = tokenizer(prompt, return_tensors="pt").to("cpu")
-    with torch.no_grad():
-        output = llm.generate(
-            **inputs,
-            max_new_tokens=200,
-            do_sample=False,
-            temperature=1.0,
-            pad_token_id=tokenizer.eos_token_id
-        )
-    decoded = tokenizer.decode(output[0], skip_special_tokens=True)
-    # Extract only the Spanish part after the prompt
-    spanish = decoded.split("Spanish:")[-1].strip()
-    return spanish
+    response = llm(prompt, max_tokens=200, stop=["\n", "English:"], echo=False)
+    return response["choices"][0]["text"].strip()
 
 def speak_spanish(spanish_text):
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
