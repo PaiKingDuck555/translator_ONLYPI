@@ -4,7 +4,6 @@ import tempfile
 import time
 import sounddevice as sd
 import scipy.io.wavfile as wav
-import whisper
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
