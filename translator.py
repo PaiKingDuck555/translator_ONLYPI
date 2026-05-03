@@ -2,6 +2,8 @@ import os
 import subprocess
 import tempfile
 import time
+import threading
+import tkinter as tk
 import numpy as np
 import sounddevice as sd
 import scipy.io.wavfile as wav
@@ -29,6 +31,35 @@ print("Loading LLM from cache...")
 llm = Llama(model_path=GGUF_MODEL, n_ctx=512, n_threads=4, verbose=False)
 print("LLM loaded. Hold button to record.")
 
+# --- UI SETUP ---
+root = tk.Tk()
+root.attributes("-fullscreen", True)
+root.configure(bg="black")
+root.bind("<Escape>", lambda e: root.destroy())
+
+status_var = tk.StringVar(value="Hold button to speak...")
+english_var = tk.StringVar(value="")
+spanish_var = tk.StringVar(value="")
+
+tk.Label(root, textvariable=status_var, font=("Helvetica", 18), fg="gray", bg="black").pack(pady=(20, 0))
+tk.Frame(root, bg="black", height=10).pack()
+
+top_frame = tk.Frame(root, bg="#111111", bd=2, relief="flat")
+top_frame.pack(fill="both", expand=True, padx=20, pady=(10, 5))
+tk.Label(top_frame, text="ENGLISH", font=("Helvetica", 14, "bold"), fg="#888888", bg="#111111").pack(anchor="w", padx=15, pady=(10, 0))
+tk.Label(top_frame, textvariable=english_var, font=("Helvetica", 26), fg="white", bg="#111111", wraplength=740, justify="left").pack(anchor="w", padx=15, pady=(5, 15))
+
+bottom_frame = tk.Frame(root, bg="#111122", bd=2, relief="flat")
+bottom_frame.pack(fill="both", expand=True, padx=20, pady=(5, 20))
+tk.Label(bottom_frame, text="ESPAÑOL", font=("Helvetica", 14, "bold"), fg="#8888ff", bg="#111122").pack(anchor="w", padx=15, pady=(10, 0))
+tk.Label(bottom_frame, textvariable=spanish_var, font=("Helvetica", 26), fg="#aaaaff", bg="#111122", wraplength=740, justify="left").pack(anchor="w", padx=15, pady=(5, 15))
+
+def update_display(english, spanish, status="Hold button to speak..."):
+    english_var.set(english)
+    spanish_var.set(spanish)
+    status_var.set(status)
+
+# --- PIPELINE ---
 def is_pressed():
     return request.get_value(BUTTON_PIN) == Value.INACTIVE
 
@@ -75,37 +106,45 @@ def speak_spanish(spanish_text):
     subprocess.run(["aplay", "-D", "plughw:2,0", out_wav], check=True)
     os.unlink(out_wav)
 
-if __name__ == "__main__":
+def pipeline_loop():
     while True:
-        try:
-            while not is_pressed():
-                time.sleep(0.05)
+        while not is_pressed():
+            time.sleep(0.05)
 
-            audio = record_while_held()
-            if len(audio) == 0:
-                continue
+        root.after(0, status_var.set, "Recording...")
+        audio = record_while_held()
+        if len(audio) == 0:
+            continue
 
-            start = time.time()
-            audio_file = save_audio(audio)
-            t1 = time.time()
+        root.after(0, status_var.set, "Transcribing...")
+        start = time.time()
+        audio_file = save_audio(audio)
+        t1 = time.time()
 
-            english = transcribe(audio_file)
-            os.unlink(audio_file)
-            t2 = time.time()
-            print(f"You said: {english}")
-            print(f"  [transcribe: {t2 - t1:.2f}s]")
+        english = transcribe(audio_file)
+        os.unlink(audio_file)
+        t2 = time.time()
+        print(f"You said: {english}")
+        print(f"  [transcribe: {t2 - t1:.2f}s]")
 
-            spanish = translate_with_llama(english)
-            t3 = time.time()
-            print(f"Spanish: {spanish}")
-            print(f"  [translate: {t3 - t2:.2f}s]")
+        root.after(0, status_var.set, "Translating...")
+        spanish = translate_with_llama(english)
+        t3 = time.time()
+        print(f"Spanish: {spanish}")
+        print(f"  [translate: {t3 - t2:.2f}s]")
 
-            speak_spanish(spanish)
-            t4 = time.time()
-            print(f"  [tts+play: {t4 - t3:.2f}s]")
-            print(f"Total time: {t4 - start:.2f}s")
+        root.after(0, update_display, english, spanish, "Speaking...")
+        speak_spanish(spanish)
+        t4 = time.time()
+        print(f"  [tts+play: {t4 - t3:.2f}s]")
+        print(f"Total time: {t4 - start:.2f}s")
 
-        except KeyboardInterrupt:
-            print("\nExiting.")
-            request.release()
-            break
+        root.after(0, status_var.set, "Hold button to speak...")
+
+if __name__ == "__main__":
+    t = threading.Thread(target=pipeline_loop, daemon=True)
+    t.start()
+    try:
+        root.mainloop()
+    finally:
+        request.release()
